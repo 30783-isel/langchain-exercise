@@ -1,3 +1,4 @@
+# backend/main.py
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -6,37 +7,66 @@ import socket
 import platform
 from pathlib import Path
 from dotenv import load_dotenv
-from langchain_community.llms import Ollama
+
+# ✨ Imports do nosso sistema LangChain (Fase 1)
+from agents.crypto_agent import create_crypto_agent
+from memory.conversation_memory import memory_manager
+from config.llm_config import llm_config
 
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(
+    title="Crypto Intelligence API",
+    description="API com LangChain Agent para análise de criptomoedas",
+    version="1.0.0 - Fase 1"
+)
 
-# 🔧 CORS CORRIGIDO - Permite pedidos do frontend web E mobile
+# 🔧 CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",      # Frontend web (local)
-        "http://frontend:3000",       # Frontend web (Docker)
-        "http://localhost:19006",     # Frontend mobile web (Expo)
-        "http://localhost:8081",      # Metro bundler
-        "http://100.64.0.0/10",       # Range completo do Tailscale
-        "*"                           # ⚠️ Em produção, especifica os domínios exatos
+        "http://localhost:3000",
+        "http://frontend:3000",
+        "http://localhost:19006",
+        "http://localhost:8081",
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+# ============================================================================
+# MODELS
+# ============================================================================
+
 class ChatRequest(BaseModel):
     message: str
-    conversation_id: str = None
+    conversation_id: str = "default"
 
+
+class AgentChatRequest(BaseModel):
+    message: str
+    conversation_id: str = "default"
+    memory_type: str = "buffer"  # "buffer", "window", "summary"
+    verbose: bool = False
+
+
+# ============================================================================
+# AGENT GLOBAL (Fase 1)
+# ============================================================================
+
+# Criar agente global (pode ser reconfigurado via endpoints)
+crypto_agent = create_crypto_agent(verbose=True)
+
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
 
 def is_running_in_docker() -> bool:
-    """
-    Deteta se o código está a correr dentro de um container Docker.
-    """
+    """Deteta se o código está a correr dentro de um container Docker."""
     if Path("/.dockerenv").exists():
         return True
     
@@ -58,84 +88,42 @@ def is_running_in_docker() -> bool:
     return False
 
 
-def get_ollama_base_url() -> str:
-    """
-    Determina o URL base do Ollama baseado no ambiente.
-    """
-    env_url = os.getenv("OLLAMA_BASE_URL")
-    if env_url:
-        print(f"📌 [CONFIG] URL do Ollama via env: {env_url}")
-        return env_url
-    
-    in_docker = is_running_in_docker()
-    
-    if in_docker:
-        url = "http://host.docker.internal:11434"
-        print(f"🐳 [DOCKER] Detetado ambiente Docker. URL Ollama: {url}")
-        return url
-    else:
-        url = "http://localhost:11434"
-        print(f"💻 [LOCAL] Detetado ambiente local. URL Ollama: {url}")
-        return url
-
-
 def get_environment_info() -> dict:
-    """
-    Retorna informação detalhada sobre o ambiente de execução.
-    """
+    """Retorna informação detalhada sobre o ambiente de execução."""
     return {
         "running_in_docker": is_running_in_docker(),
         "platform": platform.system(),
         "hostname": platform.node(),
         "python_version": platform.python_version(),
-        "ollama_url": get_ollama_base_url(),
+        "ollama_url": llm_config.ollama_url,
+        "default_llm": llm_config.default_model,
+        "has_openai_key": bool(llm_config.openai_api_key),
         "dockerenv_exists": Path("/.dockerenv").exists(),
-        "has_docker_env_var": os.getenv("DOCKER_CONTAINER") is not None,
     }
 
-    
-@app.post("/api/chat")
-async def chat(request: ChatRequest):
-    """Endpoint para chat com o Ollama"""
-    ollama_url = get_ollama_base_url()
-    
-    try:
-        llm = Ollama(
-            model="gpt-oss:120b-cloud",
-            base_url=ollama_url
-        )
-        response = llm.invoke(request.message)
-        
-        return {
-            "response": response,
-            "conversation_id": request.conversation_id
-        }
-    except Exception as e:
-        print(f"❌ Erro ao conectar ao Ollama: {str(e)}")
-        return {
-            "error": f"Erro ao conectar ao Ollama: {str(e)}",
-            "ollama_url": ollama_url,
-            "suggestion": "Verifica se o Ollama está a correr e se OLLAMA_HOST=0.0.0.0:11434"
-        }
 
-
-@app.get("/api/crypto/{symbol}")
-async def get_crypto_price(symbol: str):
-    """Endpoint de exemplo para preços de crypto"""
-    return {"symbol": symbol, "price": 50000}
-
+# ============================================================================
+# ENDPOINTS - HEALTH & DEBUG
+# ============================================================================
 
 @app.get("/")
 async def root():
     """Health check básico"""
-    return {"status": "ok", "message": "Crypto API running"}
+    return {
+        "status": "ok",
+        "message": "Crypto Intelligence API - Fase 1",
+        "features": [
+            "LangChain Agent",
+            "Memory System",
+            "Custom Tools",
+            "Multi-LLM Support"
+        ]
+    }
 
 
 @app.get("/health")
 async def health():
-    """
-    Health check detalhado com informação do ambiente.
-    """
+    """Health check detalhado com informação do ambiente."""
     return {
         "status": "healthy",
         "environment": get_environment_info()
@@ -144,21 +132,16 @@ async def health():
 
 @app.get("/api/debug/environment")
 async def debug_environment():
-    """
-    Endpoint de debug para ver toda a informação do ambiente.
-    """
+    """Endpoint de debug para ver toda a informação do ambiente."""
     return get_environment_info()
 
 
 @app.get("/debug/connection-info")
 async def connection_info(request: Request):
-    """
-    Retorna informação sobre a conexão atual
-    """
+    """Retorna informação sobre a conexão atual"""
     client_ip = request.client.host
     server_ip = socket.gethostbyname(socket.gethostname())
     
-    # IPs Tailscale começam com 100.64.x.x até 100.127.x.x
     is_tailscale_client = client_ip.startswith('100.') and client_ip.split('.')[1] in [str(i) for i in range(64, 128)]
     is_tailscale_server = server_ip.startswith('100.') and server_ip.split('.')[1] in [str(i) for i in range(64, 128)]
     
@@ -172,25 +155,160 @@ async def connection_info(request: Request):
     }
 
 
-# Log de inicialização
+# ============================================================================
+# ENDPOINTS - CHAT COM AGENT (FASE 1) 🚀
+# ============================================================================
+
+@app.post("/api/agent/chat")
+async def agent_chat(request: AgentChatRequest):
+    """
+    ✨ NOVO - Endpoint para chat com o LangChain Agent
+    
+    Suporta:
+    - Memória conversacional
+    - Uso de ferramentas (tools)
+    - Raciocínio via ReAct pattern
+    
+    Fase 1 Completa!
+    """
+    try:
+        # Executar o agente
+        result = crypto_agent.run(
+            message=request.message,
+            conversation_id=request.conversation_id
+        )
+        
+        if result["success"]:
+            return {
+                "response": result["response"],
+                "conversation_id": result["conversation_id"],
+                "success": True,
+                "phase": "Fase 1 - Agent + Memory + Tools"
+            }
+        else:
+            return {
+                "error": result["error"],
+                "conversation_id": result["conversation_id"],
+                "success": False
+            }
+            
+    except Exception as e:
+        return {
+            "error": f"Erro ao processar mensagem: {str(e)}",
+            "success": False
+        }
+
+
+@app.get("/api/agent/conversations")
+async def list_conversations():
+    """Lista todas as conversas ativas"""
+    conversations = memory_manager.list_conversations()
+    return {
+        "conversations": conversations,
+        "count": len(conversations)
+    }
+
+
+@app.get("/api/agent/conversation/{conversation_id}/history")
+async def get_conversation_history(conversation_id: str):
+    """Retorna histórico de uma conversa"""
+    history = memory_manager.get_conversation_history(conversation_id)
+    
+    return {
+        "conversation_id": conversation_id,
+        "message_count": len(history),
+        "messages": [
+            {
+                "type": msg.type,
+                "content": msg.content
+            }
+            for msg in history
+        ]
+    }
+
+
+@app.delete("/api/agent/conversation/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    """Apaga uma conversa"""
+    memory_manager.delete_conversation(conversation_id)
+    return {
+        "message": f"Conversa {conversation_id} apagada",
+        "success": True
+    }
+
+
+@app.post("/api/agent/conversation/{conversation_id}/clear")
+async def clear_conversation(conversation_id: str):
+    """Limpa histórico de uma conversa mantendo o ID"""
+    memory_manager.clear_conversation(conversation_id)
+    return {
+        "message": f"Histórico da conversa {conversation_id} limpo",
+        "success": True
+    }
+
+
+# ============================================================================
+# ENDPOINTS - LEGACY (mantidos para compatibilidade)
+# ============================================================================
+
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    """
+    Endpoint legacy de chat básico
+    Recomenda-se usar /api/agent/chat para funcionalidades completas
+    """
+    try:
+        from langchain_community.llms import Ollama
+        
+        llm = Ollama(
+            model="gpt-oss:120b-cloud",
+            base_url=llm_config.ollama_url
+        )
+        response = llm.invoke(request.message)
+        
+        return {
+            "response": response,
+            "conversation_id": request.conversation_id,
+            "note": "Use /api/agent/chat para funcionalidades avançadas"
+        }
+    except Exception as e:
+        return {
+            "error": f"Erro ao conectar ao Ollama: {str(e)}",
+            "ollama_url": llm_config.ollama_url
+        }
+
+
+@app.get("/api/crypto/{symbol}")
+async def get_crypto_price(symbol: str):
+    """Endpoint de exemplo para preços de crypto"""
+    return {"symbol": symbol, "price": 50000}
+
+
+# ============================================================================
+# STARTUP
+# ============================================================================
+
 if __name__ == "__main__":
     import uvicorn
     
-    print("\n" + "="*60)
-    print("🚀 A iniciar Crypto Intelligence API")
-    print("="*60)
+    print("\n" + "="*70)
+    print("🚀 Crypto Intelligence API - Fase 1")
+    print("="*70)
     
     env_info = get_environment_info()
-    print(f"\n📊 Informação do Ambiente:")
+    print(f"\n📊 Ambiente:")
     for key, value in env_info.items():
         print(f"   • {key}: {value}")
     
-    print(f"\n🔗 Ollama URL: {get_ollama_base_url()}")
-    print("="*60 + "\n")
+    print(f"\n✨ Novos Endpoints da Fase 1:")
+    print(f"   • POST /api/agent/chat - Chat com Agent LangChain")
+    print(f"   • GET  /api/agent/conversations - Listar conversas")
+    print(f"   • GET  /api/agent/conversation/{{id}}/history - Ver histórico")
+    print("="*70 + "\n")
     
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",  # ✅ Aceita conexões de qualquer IP
+        host="0.0.0.0",
         port=8000,
         reload=True
     )
