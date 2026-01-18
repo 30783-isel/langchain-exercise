@@ -1,2 +1,0 @@
-#Força a usar o python do env
-python -m uvicorn main:app --reload --port 8000

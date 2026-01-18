@@ -1,0 +1,27 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependências do sistema necessárias para o Expo
+RUN apk add --no-cache \
+    git \
+    bash
+
+# Instalar Expo CLI globalmente
+RUN npm install -g expo-cli
+
+# Copiar package files
+COPY frontend-mobile/package*.json ./
+
+# Instalar dependências
+RUN npm ci
+
+# Copiar o resto do código
+COPY frontend-mobile/ .
+
+# Expor a porta padrão do Expo
+EXPOSE 19000 19001 19002
+
+# Comando para correr a aplicação Expo
+# --web para executar no modo web dentro do container
+CMD ["npx", "expo", "start", "--web", "--port", "19006"]

@@ -25,6 +25,21 @@ build/
 dist/
 npm-debug.log*
 
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+expo-env.d.ts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+.kotlin/
+/ios
+/android
+
 # IDE
 .vscode/
 .idea/

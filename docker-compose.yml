@@ -35,6 +35,28 @@ services:
     networks:
       - crypto-network
 
+  frontend-mobile:
+    build:
+      context: .
+      dockerfile: Dockerfile.mobile
+    container_name: crypto-mobile
+    ports:
+      - "19006:19006"  # Porta web do Expo
+      - "19000:19000"  # Metro bundler
+      - "19001:19001"  # Metro bundler
+      - "19002:19002"  # Metro bundler
+    environment:
+      - NODE_ENV=development
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+    depends_on:
+      - backend
+    networks:
+      - crypto-network
+    # Para desenvolvimento com hot-reload
+    volumes:
+      - ./frontend-mobile:/app
+      - /app/node_modules
+
 networks:
   crypto-network:
     driver: bridge
