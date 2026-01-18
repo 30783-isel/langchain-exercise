@@ -63,6 +63,7 @@ def is_running_in_docker() -> bool:
     if len(hostname) == 12 and all(c in "0123456789abcdef" for c in hostname):
         return True
     
+    print(f"🐳 [DOCKER] False -----------------------------------------------------.")
     return False
 
 

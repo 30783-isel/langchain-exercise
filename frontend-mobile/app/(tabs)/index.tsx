@@ -1,98 +1,161 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { useState } from 'react';
+import { StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { chatAPI, Message } from '@/services/api';
 
-export default function HomeScreen() {
+export default function ChatScreen() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    
+    const userMsg: Message = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMsg]);
+    setLoading(true);
+    setInput('');
+
+    try {
+      const response = await chatAPI.sendMessage({
+        message: input,
+        conversation_id: 'mobile-session-123'
+      });
+
+      const aiMsg: Message = { 
+        role: 'assistant', 
+        content: response.response 
+      };
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (error) {
+      console.error('Error:', error);
+      // Adiciona mensagem de erro
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Erro ao comunicar com o servidor. Tenta novamente.'
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={100}
+    >
+      <ThemedView style={styles.header}>
+        <ThemedText type="title">🪙 Crypto Intelligence</ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
+      <ScrollView style={styles.messagesContainer}>
+        {messages.map((msg, i) => (
+          <ThemedView 
+            key={i} 
+            style={[
+              styles.messageBubble,
+              msg.role === 'user' ? styles.userBubble : styles.aiBubble
+            ]}
+          >
+            <ThemedText style={msg.role === 'user' ? styles.userText : styles.aiText}>
+              {msg.content}
+            </ThemedText>
+          </ThemedView>
+        ))}
+        {loading && (
+          <ThemedView style={styles.loadingBubble}>
+            <ThemedText>A pensar...</ThemedText>
+          </ThemedView>
+        )}
+      </ScrollView>
+
+      <ThemedView style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={input}
+          onChangeText={setInput}
+          placeholder="Pergunta sobre crypto..."
+          placeholderTextColor="#999"
+          onSubmitEditing={sendMessage}
+          editable={!loading}
+        />
+        <TouchableOpacity 
+          style={styles.sendButton}
+          onPress={sendMessage}
+          disabled={loading || !input.trim()}
+        >
+          <ThemedText style={styles.sendButtonText}>Enviar</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
+  header: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  messagesContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  messageBubble: {
+    padding: 12,
+    borderRadius: 16,
     marginBottom: 8,
+    maxWidth: '80%',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  userBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#007AFF',
+  },
+  aiBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E5E5EA',
+  },
+  userText: {
+    color: '#fff',
+  },
+  aiText: {
+    color: '#000',
+  },
+  loadingBubble: {
+    alignSelf: 'flex-start',
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#E5E5EA',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+  },
+  sendButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
