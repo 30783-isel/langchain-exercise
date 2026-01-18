@@ -11,10 +11,16 @@ load_dotenv()
 
 app = FastAPI()
 
-# CORS para o frontend aceitar
+# 🔧 CORS CORRIGIDO - Permite pedidos do frontend web E mobile
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://frontend:3000"],
+    allow_origins=[
+        "http://localhost:3000",      # Frontend web (local)
+        "http://frontend:3000",       # Frontend web (Docker)
+        "http://localhost:19006",     # Frontend mobile web (Expo)
+        "http://localhost:8081",      # Metro bundler
+        "*"                           # ⚠️ Em produção, especifica os domínios exatos
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,65 +34,37 @@ class ChatRequest(BaseModel):
 def is_running_in_docker() -> bool:
     """
     Deteta se o código está a correr dentro de um container Docker.
-    
-    Usa múltiplas verificações para maior robustez:
-    1. Existência do ficheiro /.dockerenv (método mais comum)
-    2. Análise do /proc/1/cgroup (processo init do container)
-    3. Variável de ambiente DOCKER_CONTAINER (opcional)
-    
-    Returns:
-        bool: True se estiver em Docker, False caso contrário
     """
-    
-    # Método 1: Verifica o ficheiro .dockerenv (mais simples e confiável)
     if Path("/.dockerenv").exists():
         return True
     
-    # Método 2: Verifica o cgroup (funciona em mais casos)
     try:
         with open("/proc/1/cgroup", "rt") as f:
             content = f.read()
-            # Verifica se contém "docker" ou "containerd" no cgroup
             if "docker" in content or "containerd" in content:
                 return True
     except Exception:
-        # Se não conseguir ler (ex: Windows), ignora
         pass
     
-    # Método 3: Variável de ambiente customizada (mais explícito)
     if os.getenv("DOCKER_CONTAINER") == "true":
         return True
     
-    # Método 4: Verifica se hostname parece ser de um container
-    # Containers costumam ter hostnames hexadecimais curtos
     hostname = platform.node()
     if len(hostname) == 12 and all(c in "0123456789abcdef" for c in hostname):
         return True
     
-    print(f"🐳 [DOCKER] False -----------------------------------------------------.")
     return False
 
 
 def get_ollama_base_url() -> str:
     """
     Determina o URL base do Ollama baseado no ambiente.
-    
-    Prioridades:
-    1. Variável de ambiente OLLAMA_BASE_URL (override manual)
-    2. Se estiver em Docker -> host.docker.internal:11434
-    3. Caso contrário (desenvolvimento local) -> localhost:11434
-    
-    Returns:
-        str: URL completo do Ollama
     """
-    
-    # Prioridade 1: Override manual via variável de ambiente
     env_url = os.getenv("OLLAMA_BASE_URL")
     if env_url:
         print(f"📌 [CONFIG] URL do Ollama via env: {env_url}")
         return env_url
     
-    # Prioridade 2: Deteta automaticamente o ambiente
     in_docker = is_running_in_docker()
     
     if in_docker:
@@ -102,7 +80,6 @@ def get_ollama_base_url() -> str:
 def get_environment_info() -> dict:
     """
     Retorna informação detalhada sobre o ambiente de execução.
-    Útil para debugging.
     """
     return {
         "running_in_docker": is_running_in_docker(),
@@ -156,7 +133,6 @@ async def root():
 async def health():
     """
     Health check detalhado com informação do ambiente.
-    Útil para debugging de problemas de conectividade.
     """
     return {
         "status": "healthy",
@@ -168,7 +144,6 @@ async def health():
 async def debug_environment():
     """
     Endpoint de debug para ver toda a informação do ambiente.
-    IMPORTANTE: Desativa isto em produção por segurança!
     """
     return get_environment_info()
 
@@ -191,7 +166,7 @@ if __name__ == "__main__":
     
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # ✅ Aceita conexões de qualquer IP
         port=8000,
         reload=True
     )
