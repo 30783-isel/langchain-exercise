@@ -18,3 +18,19 @@ git push -u origin master --force
 
 Docker
 docker-compose up --build
+
+logs
+# Todos os serviços
+docker-compose logs -f
+
+# Apenas o backend
+docker-compose logs -f backend
+
+# Apenas o frontend
+docker-compose logs -f frontend
+
+# Apenas o mobile
+docker-compose logs -f frontend-mobile
+
+# Últimas 100 linhas
+docker-compose logs --tail=100 backend

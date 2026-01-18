@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+import socket
 import platform
 from pathlib import Path
 from dotenv import load_dotenv
@@ -19,6 +20,7 @@ app.add_middleware(
         "http://frontend:3000",       # Frontend web (Docker)
         "http://localhost:19006",     # Frontend mobile web (Expo)
         "http://localhost:8081",      # Metro bundler
+        "http://100.64.0.0/10",       # Range completo do Tailscale
         "*"                           # ⚠️ Em produção, especifica os domínios exatos
     ],
     allow_credentials=True,
@@ -146,6 +148,28 @@ async def debug_environment():
     Endpoint de debug para ver toda a informação do ambiente.
     """
     return get_environment_info()
+
+
+@app.get("/debug/connection-info")
+async def connection_info(request: Request):
+    """
+    Retorna informação sobre a conexão atual
+    """
+    client_ip = request.client.host
+    server_ip = socket.gethostbyname(socket.gethostname())
+    
+    # IPs Tailscale começam com 100.64.x.x até 100.127.x.x
+    is_tailscale_client = client_ip.startswith('100.') and client_ip.split('.')[1] in [str(i) for i in range(64, 128)]
+    is_tailscale_server = server_ip.startswith('100.') and server_ip.split('.')[1] in [str(i) for i in range(64, 128)]
+    
+    return {
+        "client_ip": client_ip,
+        "server_ip": server_ip,
+        "is_tailscale_client": is_tailscale_client,
+        "is_tailscale_server": is_tailscale_server,
+        "connection_type": "tailscale" if is_tailscale_client else "local/internet",
+        "headers": dict(request.headers)
+    }
 
 
 # Log de inicialização

@@ -5,6 +5,9 @@ import { Platform } from 'react-native';
 const getApiUrl = () => {
   // Verifica se está a correr em plataforma nativa (iOS/Android)
   // vs web (browser)
+
+
+
   
   if (Platform.OS === 'web') {
     // Modo Web (browser) - usa localhost
