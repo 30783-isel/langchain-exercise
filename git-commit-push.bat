@@ -16,7 +16,7 @@ REM Faz commit
 git commit -m "%~1"
 
 REM Faz push
-git push
+git push -u origin master
 
 echo ---
 echo Operacao concluida!
