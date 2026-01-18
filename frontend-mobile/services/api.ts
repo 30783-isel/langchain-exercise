@@ -1,31 +1,5 @@
 // frontend-mobile/services/api.ts
-import { Platform } from 'react-native';
-
-// 🔧 Configuração dinâmica do URL do backend
-const getApiUrl = () => {
-  // Verifica se está a correr em plataforma nativa (iOS/Android)
-  // vs web (browser)
-
-
-
-  
-  if (Platform.OS === 'web') {
-    // Modo Web (browser) - usa localhost
-    console.log('🌐 Plataforma: WEB');
-    return 'http://localhost:8000';
-  } else {
-    // Modo Nativo (iOS/Android/Expo Go) - usa o IP da tua máquina
-    console.log('📱 Plataforma: NATIVE (' + Platform.OS + ')');
-    
-    // ⚠️ IMPORTANTE: Este IP tem que ser o IP da tua máquina na rede local
-    // Para encontrar: ipconfig (Windows) ou ifconfig (Mac/Linux)
-    return 'http://192.168.1.64:8000';
-  }
-};
-
-const API_URL = getApiUrl();
-
-console.log('🌐 API URL configurado:', API_URL);
+import { getApiUrl, invalidateCache } from '@/utils/apiConfig';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -44,6 +18,7 @@ export interface ChatResponse {
 
 export const chatAPI = {
   sendMessage: async (request: ChatRequest): Promise<ChatResponse> => {
+    const API_URL = await getApiUrl(); // ✅ Sempre pega o URL mais recente
     console.log('📤 A enviar mensagem para:', `${API_URL}/api/chat`);
     
     try {
@@ -66,16 +41,41 @@ export const chatAPI = {
       return data;
     } catch (error) {
       console.error('❌ Erro ao fazer pedido:', error);
-      throw error;
+      
+      // 🔄 RETRY com refresh do URL em caso de erro
+      console.log('🔄 A tentar novamente com refresh do URL...');
+      const newApiUrl = await getApiUrl(true); // Force refresh
+      
+      try {
+        const retryResponse = await fetch(`${newApiUrl}/api/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
+        });
+        
+        if (!retryResponse.ok) {
+          throw new Error(`HTTP error! status: ${retryResponse.status}`);
+        }
+        
+        const retryData = await retryResponse.json();
+        console.log('✅ Retry bem-sucedido!');
+        return retryData;
+      } catch (retryError) {
+        console.error('❌ Retry também falhou:', retryError);
+        throw error; // Lança o erro original
+      }
     }
   },
   
-  // Método de teste para verificar conectividade
   testConnection: async (): Promise<boolean> => {
+    const API_URL = await getApiUrl();
     console.log('🔍 A testar conexão com:', `${API_URL}/health`);
+    
     try {
       const response = await fetch(`${API_URL}/health`, {
-        method: 'GET',
+        method: 'GET'
       });
       console.log('✅ Teste de conexão:', response.ok ? 'SUCESSO' : 'FALHOU');
       return response.ok;
@@ -83,5 +83,12 @@ export const chatAPI = {
       console.error('❌ Erro ao testar conexão:', error);
       return false;
     }
+  },
+  
+  // Força refresh da configuração manualmente
+  refreshConfig: async (): Promise<string> => {
+    console.log('🔄 A forçar refresh manual...');
+    invalidateCache();
+    return await getApiUrl(true);
   }
 };

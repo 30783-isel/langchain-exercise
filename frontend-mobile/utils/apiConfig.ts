@@ -1,5 +1,10 @@
+// frontend-mobile/utils/apiConfig.ts
 import * as Network from 'expo-network';
 import { Platform } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+
+let cachedApiUrl: string | null = null;
+let cachedConnectionType: string | null = null;
 
 /**
  * Deteta se estamos a usar Tailscale baseado no IP local
@@ -12,6 +17,9 @@ export async function detectConnectionType() {
     const isTailscale = ip.startsWith('100.') && 
                         parseInt(ip.split('.')[1]) >= 64 && 
                         parseInt(ip.split('.')[1]) <= 127;
+    
+    console.log(`📱 IP Detetado: ${ip}`);
+    console.log(`🔐 É Tailscale: ${isTailscale}`);
     
     return {
       clientIp: ip,
@@ -28,11 +36,23 @@ export async function detectConnectionType() {
   }
 }
 
-
 /**
- * Obtém o URL da API baseado no ambiente
+ * Obtém o URL da API baseado no ambiente (com forçar refresh)
  */
-export async function getApiUrl() {
+export async function getApiUrl(forceRefresh: boolean = false): Promise<string> {
+  // Se forçar refresh, limpa o cache
+  if (forceRefresh) {
+    console.log('🔄 A forçar refresh do URL da API...');
+    cachedApiUrl = null;
+    cachedConnectionType = null;
+  }
+
+  // Se já temos cache, retorna
+  if (cachedApiUrl && !forceRefresh) {
+    console.log('💾 Usando URL do cache:', cachedApiUrl);
+    return cachedApiUrl;
+  }
+
   const connection = await detectConnectionType();
   
   // URLs configurados
@@ -40,17 +60,57 @@ export async function getApiUrl() {
   const LOCAL_API = 'http://192.168.1.64:8000';  
   const LOCALHOST_API = 'http://localhost:8000';
   
+  let selectedUrl: string;
+  
   // Lógica de seleção
   if (connection.isTailscale) {
     console.log('🔐 Usando Tailscale API');
-    return TAILSCALE_API;
-  }
-  
-  if (Platform.OS === 'web') {
+    selectedUrl = TAILSCALE_API;
+  } else if (Platform.OS === 'web') {
     console.log('🌐 Usando Localhost (Web)');
-    return LOCALHOST_API;
+    selectedUrl = LOCALHOST_API;
+  } else {
+    console.log('🏠 Usando Local Network API');
+    selectedUrl = LOCAL_API;
   }
   
-  console.log('🏠 Usando Local Network API');
-  return LOCAL_API;
+  cachedApiUrl = selectedUrl;
+  cachedConnectionType = connection.connectionType;
+  
+  console.log(`✅ URL configurado: ${cachedApiUrl} (${cachedConnectionType})`);
+  
+  return cachedApiUrl;
+}
+
+/**
+ * Invalida o cache do URL (chamar quando a rede muda)
+ */
+export function invalidateCache() {
+  console.log('🗑️ Cache invalidado');
+  cachedApiUrl = null;
+  cachedConnectionType = null;
+}
+
+/**
+ * Configura listener para mudanças de rede
+ */
+export function setupNetworkListener(onNetworkChange?: () => void) {
+  console.log('📡 A configurar listener de rede...');
+  
+  const unsubscribe = NetInfo.addEventListener(state => {
+    console.log('\n🔔 Mudança de rede detetada!');
+    console.log(`   Tipo: ${state.type}`);
+    console.log(`   Conectado: ${state.isConnected}`);
+    console.log(`   Internet: ${state.isInternetReachable}`);
+    
+    // Invalida o cache quando a rede muda
+    invalidateCache();
+    
+    // Callback opcional
+    if (onNetworkChange) {
+      onNetworkChange();
+    }
+  });
+  
+  return unsubscribe;
 }
