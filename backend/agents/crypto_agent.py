@@ -97,18 +97,3 @@ def create_crypto_agent(**kwargs) -> CryptoAgent:
     return CryptoAgent(**kwargs)
 
 
-# Teste rápido
-if __name__ == "__main__":
-    print("🧪 Teste do CryptoAgent Simples\n")
-    
-    agent = create_crypto_agent(verbose=True)
-    
-    result = agent.run(
-        message="Resumidamente, o que é um leptão?",
-        conversation_id="test"
-    )
-    
-    if result["success"]:
-        print(f"\n✅ Resposta: {result['response']}")
-    else:
-        print(f"\n❌ Erro: {result['error']}")

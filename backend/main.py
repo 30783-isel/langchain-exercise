@@ -9,7 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # ✨ Imports do nosso sistema LangChain (Fase 1)
-from agents.crypto_agent import create_crypto_agent
+from agents import create_crypto_agent
 from config.llm_config import llm_config
 
 load_dotenv()
