@@ -2,38 +2,16 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import os
 import socket
-import platform
-from pathlib import Path
-from dotenv import load_dotenv
+from config.llm_config import llm_config
 
 # ✨ Imports do nosso sistema LangChain (Fase 1)
 from agents import create_crypto_agent
-from config.llm_config import llm_config
+from api import FastAPIAppFactory
+from utilities.utilities import Utilities
 
-load_dotenv()
 
-app = FastAPI(
-    title="Crypto Intelligence API",
-    description="API com LangChain Agent para análise de criptomoedas",
-    version="1.0.0 - Fase 1"
-)
-
-# 🔧 CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://frontend:3000",
-        "http://localhost:19006",
-        "http://localhost:8081",
-        "*"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPIAppFactory.create_app()
 
 
 # ============================================================================
@@ -60,45 +38,7 @@ class AgentChatRequest(BaseModel):
 crypto_agent = create_crypto_agent(verbose=True)
 
 
-# ============================================================================
-# UTILITY FUNCTIONS
-# ============================================================================
 
-def is_running_in_docker() -> bool:
-    """Deteta se o código está a correr dentro de um container Docker."""
-    if Path("/.dockerenv").exists():
-        return True
-    
-    try:
-        with open("/proc/1/cgroup", "rt") as f:
-            content = f.read()
-            if "docker" in content or "containerd" in content:
-                return True
-    except Exception:
-        pass
-    
-    if os.getenv("DOCKER_CONTAINER") == "true":
-        return True
-    
-    hostname = platform.node()
-    if len(hostname) == 12 and all(c in "0123456789abcdef" for c in hostname):
-        return True
-    
-    return False
-
-
-def get_environment_info() -> dict:
-    """Retorna informação detalhada sobre o ambiente de execução."""
-    return {
-        "running_in_docker": is_running_in_docker(),
-        "platform": platform.system(),
-        "hostname": platform.node(),
-        "python_version": platform.python_version(),
-        "ollama_url": llm_config.ollama_url,
-        "default_llm": llm_config.default_model,
-        "has_openai_key": bool(llm_config.openai_api_key),
-        "dockerenv_exists": Path("/.dockerenv").exists(),
-    }
 
 
 # ============================================================================
@@ -120,19 +60,7 @@ async def root():
     }
 
 
-@app.get("/health")
-async def health():
-    """Health check detalhado com informação do ambiente."""
-    return {
-        "status": "healthy",
-        "environment": get_environment_info()
-    }
 
-
-@app.get("/api/debug/environment")
-async def debug_environment():
-    """Endpoint de debug para ver toda a informação do ambiente."""
-    return get_environment_info()
 
 
 @app.get("/debug/connection-info")
@@ -249,7 +177,7 @@ if __name__ == "__main__":
     print("🚀 Crypto Intelligence API - Fase 1")
     print("="*70)
     
-    env_info = get_environment_info()
+    env_info = Utilities.get_environment_info()
     print(f"\n📊 Ambiente:")
     for key, value in env_info.items():
         print(f"   • {key}: {value}")
