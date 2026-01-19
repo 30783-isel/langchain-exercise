@@ -1,140 +1,87 @@
 # backend/agents/crypto_agent.py
 """
 Agente Principal de Crypto Intelligence
-Usa LLM, Memory e Tools para responder perguntas sobre crypto
+Versão SIMPLES usando LangChain 1.2.x `create_agent`
+SEM memory, SEM tools - apenas LLM
 """
-from typing import Optional, Dict, Any
 
-
-from config.llm_config import get_default_llm
-from memory.conversation_memory import get_memory
-from tools.crypto_tools import get_all_tools
-
-
-# Prompt template para o agente
-CRYPTO_AGENT_PROMPT = """Você é um assistente especializado em criptomoedas.
-Você tem acesso às seguintes ferramentas:
-
-{tools}
-
-Descrição das ferramentas:
-{tool_names}
-
-Use o seguinte formato:
-
-Question: a pergunta que você deve responder
-Thought: você deve sempre pensar sobre o que fazer
-Action: a ação a tomar, deve ser uma de [{tool_names}]
-Action Input: o input para a ação
-Observation: o resultado da ação
-... (este Thought/Action/Action Input/Observation pode repetir N vezes)
-Thought: Eu agora sei a resposta final
-Final Answer: a resposta final à pergunta original
-
-IMPORTANTE:
-- Seja sempre prestável e educativo
-- Para dados de mercado, use as ferramentas disponíveis
-- Admita quando não tem informação suficiente
-- Sugira onde o utilizador pode encontrar mais informação
-
-Histórico da conversa:
-{chat_history}
-
-Pergunta: {input}
-{agent_scratchpad}
-"""
+from typing import Dict, Any
+from langchain.agents import create_agent
+from langchain_community.llms import Ollama
+from config.llm_config import llm_config
 
 
 class CryptoAgent:
     """
-    Agente conversacional para análise de criptomoedas
-    Combina LLM + Memory + Tools
+    Agente simples sem memory nem tools
+    Perfeito para testes básicos
     """
-    
-    def __init__(
-        self,
-        llm=None,
-        memory_type: str = "buffer",
-        verbose: bool = True
-    ):
-        """
-        Inicializa o agente
-        
-        Args:
-            llm: Instância de LLM (usa default se None)
-            memory_type: Tipo de memória a usar
-            verbose: Se deve mostrar raciocínio do agente
-        """
-        self.llm = llm or get_default_llm()
-        self.memory_type = memory_type
-        self.verbose = verbose
-        self.tools = get_all_tools()
-        
-        # Criar prompt
-        self.prompt = PromptTemplate(
-            input_variables=["input", "agent_scratchpad", "chat_history", "tools", "tool_names"],
-            template=CRYPTO_AGENT_PROMPT
-        )
-        
-        # Criar o agente base
-        self.agent = create_react_agent(
-            llm=self.llm,
-            tools=self.tools,
-            prompt=self.prompt
-        )
-    
-    def create_executor(self, conversation_id: str) -> AgentExecutor:
-        """
-        Cria executor do agente com memória para uma conversa específica
-        
-        Args:
-            conversation_id: ID único da conversa
-        """
-        memory = get_memory(
-            conversation_id,
-            memory_type=self.memory_type,
-            llm=self.llm
-        )
-        
-        executor = AgentExecutor(
-            agent=self.agent,
-            tools=self.tools,
-            memory=memory,
-            verbose=self.verbose,
-            handle_parsing_errors=True,
-            max_iterations=5
-        )
-        
-        return executor
-    
+
+    def __init__(self, model_name: str = "gpt-oss:120b-cloud", verbose: bool = False):
+        """Inicializa o agente"""
+        try:
+            # Criar LLM
+            self.llm = Ollama(
+                model=model_name,
+                base_url=llm_config.ollama_url
+            )
+            
+            # Criar agent (versão simples)
+            self.agent = create_agent(
+                model=self.llm,
+                tools=[]  # Sem tools por agora
+            )
+            
+            self.verbose = verbose
+            
+            if self.verbose:
+                print(f"✅ Agent criado com Ollama ({model_name})")
+                
+        except Exception as e:
+            print(f"❌ Erro ao criar agent: {e}")
+            import traceback
+            traceback.print_exc()
+            self.agent = None
+
     def run(
-        self,
-        message: str,
-        conversation_id: str,
+        self, 
+        message: str, 
+        conversation_id: str = "default",
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Executa o agente com uma mensagem
+        Executa o agente
         
         Args:
-            message: Mensagem do utilizador
-            conversation_id: ID da conversa
-            **kwargs: Argumentos adicionais
-        
-        Returns:
-            Dict com resposta e metadata
-        """
-        try:
-            executor = self.create_executor(conversation_id)
+            message: Pergunta do utilizador
+            conversation_id: ID da conversa (ignorado nesta versão simples)
             
-            # Invocar o agente
-            result = executor.invoke({"input": message})
+        Returns:
+            Dict com success, response ou error
+        """
+        if self.agent is None:
+            return {
+                "success": False,
+                "error": "Agente não inicializado",
+                "conversation_id": conversation_id
+            }
+
+        try:
+            # Invocar agent
+            result = self.agent.invoke({
+                "messages": [{"role": "user", "content": message}]
+            })
+            
+            # Extrair resposta
+            if isinstance(result, dict):
+                response = result.get("output", str(result))
+            else:
+                response = str(result)
             
             return {
                 "success": True,
-                "response": result["output"],
-                "conversation_id": conversation_id,
-                "intermediate_steps": result.get("intermediate_steps", [])
+                "response": response,
+                "conversation_id": conversation_id
             }
             
         except Exception as e:
@@ -143,29 +90,25 @@ class CryptoAgent:
                 "error": str(e),
                 "conversation_id": conversation_id
             }
-    
-    async def arun(
-        self,
-        message: str,
-        conversation_id: str,
-        **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Versão assíncrona do run
-        Para usar com FastAPI async endpoints
-        """
-        # Por agora, chama a versão síncrona
-        # Na Fase 4/5 podemos otimizar para async real
-        return self.run(message, conversation_id, **kwargs)
 
 
 def create_crypto_agent(**kwargs) -> CryptoAgent:
-    """
-    Factory function para criar agente
-    
-    Uso:
-        from agents.crypto_agent import create_crypto_agent
-        agent = create_crypto_agent(verbose=True)
-        result = agent.run("Qual é o preço do Bitcoin?", "user_123")
-    """
+    """Factory function para criar agente"""
     return CryptoAgent(**kwargs)
+
+
+# Teste rápido
+if __name__ == "__main__":
+    print("🧪 Teste do CryptoAgent Simples\n")
+    
+    agent = create_crypto_agent(verbose=True)
+    
+    result = agent.run(
+        message="Resumidamente, o que é um leptão?",
+        conversation_id="test"
+    )
+    
+    if result["success"]:
+        print(f"\n✅ Resposta: {result['response']}")
+    else:
+        print(f"\n❌ Erro: {result['error']}")

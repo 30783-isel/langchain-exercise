@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 # ✨ Imports do nosso sistema LangChain (Fase 1)
 from agents.crypto_agent import create_crypto_agent
-from memory.conversation_memory import memory_manager
 from config.llm_config import llm_config
 
 load_dotenv()
@@ -199,52 +198,7 @@ async def agent_chat(request: AgentChatRequest):
         }
 
 
-@app.get("/api/agent/conversations")
-async def list_conversations():
-    """Lista todas as conversas ativas"""
-    conversations = memory_manager.list_conversations()
-    return {
-        "conversations": conversations,
-        "count": len(conversations)
-    }
 
-
-@app.get("/api/agent/conversation/{conversation_id}/history")
-async def get_conversation_history(conversation_id: str):
-    """Retorna histórico de uma conversa"""
-    history = memory_manager.get_conversation_history(conversation_id)
-    
-    return {
-        "conversation_id": conversation_id,
-        "message_count": len(history),
-        "messages": [
-            {
-                "type": msg.type,
-                "content": msg.content
-            }
-            for msg in history
-        ]
-    }
-
-
-@app.delete("/api/agent/conversation/{conversation_id}")
-async def delete_conversation(conversation_id: str):
-    """Apaga uma conversa"""
-    memory_manager.delete_conversation(conversation_id)
-    return {
-        "message": f"Conversa {conversation_id} apagada",
-        "success": True
-    }
-
-
-@app.post("/api/agent/conversation/{conversation_id}/clear")
-async def clear_conversation(conversation_id: str):
-    """Limpa histórico de uma conversa mantendo o ID"""
-    memory_manager.clear_conversation(conversation_id)
-    return {
-        "message": f"Histórico da conversa {conversation_id} limpo",
-        "success": True
-    }
 
 
 # ============================================================================
