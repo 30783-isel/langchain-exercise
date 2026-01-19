@@ -1,14 +1,14 @@
 import os
 import platform
 from pathlib import Path
-from backend.config.llm_config import llm_config
+from config.llm_config import llm_config
 
 class Utilities:
     
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
-
+    @staticmethod
     def is_running_in_docker() -> bool:
         """Deteta se o código está a correr dentro de um container Docker."""
         if Path("/.dockerenv").exists():
@@ -31,11 +31,11 @@ class Utilities:
         
         return False
 
-
-    def get_environment_info(self) -> dict:
+    @staticmethod
+    def get_environment_info() -> dict:
         """Retorna informação detalhada sobre o ambiente de execução."""
         return {
-            "running_in_docker": self.is_running_in_docker(),
+            "running_in_docker": Utilities.is_running_in_docker(),
             "platform": platform.system(),
             "hostname": platform.node(),
             "python_version": platform.python_version(),
