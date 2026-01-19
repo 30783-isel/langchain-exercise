@@ -1,14 +1,12 @@
 # backend/main.py
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import socket
 from config.llm_config import llm_config
 
 # ✨ Imports do nosso sistema LangChain (Fase 1)
 from agents import create_crypto_agent
 from api import FastAPIAppFactory
 from utilities.utilities import Utilities
+from utilities.utilities_api import router as utilities_router
 
 
 app = FastAPIAppFactory.create_app()
@@ -37,49 +35,14 @@ class AgentChatRequest(BaseModel):
 # Criar agente global (pode ser reconfigurado via endpoints)
 crypto_agent = create_crypto_agent(verbose=True)
 
-
-
-
-
 # ============================================================================
-# ENDPOINTS - HEALTH & DEBUG
+# UTILITIES
 # ============================================================================
-
-@app.get("/")
-async def root():
-    """Health check básico"""
-    return {
-        "status": "ok",
-        "message": "Crypto Intelligence API - Fase 1",
-        "features": [
-            "LangChain Agent",
-            "Memory System",
-            "Custom Tools",
-            "Multi-LLM Support"
-        ]
-    }
+app.include_router(utilities_router)
 
 
 
 
-
-@app.get("/debug/connection-info")
-async def connection_info(request: Request):
-    """Retorna informação sobre a conexão atual"""
-    client_ip = request.client.host
-    server_ip = socket.gethostbyname(socket.gethostname())
-    
-    is_tailscale_client = client_ip.startswith('100.') and client_ip.split('.')[1] in [str(i) for i in range(64, 128)]
-    is_tailscale_server = server_ip.startswith('100.') and server_ip.split('.')[1] in [str(i) for i in range(64, 128)]
-    
-    return {
-        "client_ip": client_ip,
-        "server_ip": server_ip,
-        "is_tailscale_client": is_tailscale_client,
-        "is_tailscale_server": is_tailscale_server,
-        "connection_type": "tailscale" if is_tailscale_client else "local/internet",
-        "headers": dict(request.headers)
-    }
 
 
 # ============================================================================

@@ -5,7 +5,6 @@ Exemplos de uso do Agent, Memory e Tools
 """
 import asyncio
 from backend.agents.crypto_agent import create_crypto_agent
-from memory.conversation_memory import memory_manager
 from config.llm_config import llm_config
 
 
@@ -69,9 +68,7 @@ def test_agent_with_memory():
     )
     print(f"🤖 Resposta: {result2['response']}")
     
-    # Ver histórico
-    history = memory_manager.get_conversation_history(conv_id)
-    print(f"\n📜 Histórico: {len(history)} mensagens")
+
 
 
 def test_memory_types():
@@ -134,21 +131,7 @@ def test_conversation_management():
             conversation_id=f"conv_{i+1}"
         )
     
-    # Listar conversas
-    conversations = memory_manager.list_conversations()
-    print(f"\n📋 Conversas ativas: {conversations}")
-    
-    # Limpar uma conversa
-    memory_manager.clear_conversation("conv_1")
-    print(f"✅ Conversa 'conv_1' limpa")
-    
-    # Apagar uma conversa
-    memory_manager.delete_conversation("conv_2")
-    print(f"✅ Conversa 'conv_2' apagada")
-    
-    # Listar novamente
-    conversations = memory_manager.list_conversations()
-    print(f"📋 Conversas restantes: {conversations}")
+
 
 
 def test_llm_config():

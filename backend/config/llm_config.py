@@ -38,7 +38,7 @@ class LLMConfig:
     def __init__(self):
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.ollama_url = get_ollama_url()
-        self.default_model = os.getenv("DEFAULT_LLM", "ollama")  # "openai" ou "ollama"
+        self.default_model = os.getenv("DEFAULT_LLM", "ollama")
         
     def get_llm(self, model_type: Optional[str] = None, **kwargs):
         """
