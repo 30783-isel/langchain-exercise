@@ -8,7 +8,7 @@ SEM memory, SEM tools - apenas LLM
 from typing import Dict, Any
 from langchain.agents import create_agent
 from langchain_community.llms import Ollama
-from config.llm_config import llm_config
+from backend.config.llm_config import llm_config
 
 
 class CryptoAgent:
@@ -91,9 +91,6 @@ class CryptoAgent:
                 "conversation_id": conversation_id
             }
 
-
-def create_crypto_agent(**kwargs) -> CryptoAgent:
-    """Factory function para criar agente"""
-    return CryptoAgent(**kwargs)
-
+# 🔹 singleton opcional (1 instância global)
+agent = CryptoAgent(verbose=True)
 
