@@ -8,7 +8,7 @@ SEM memory, SEM tools - apenas LLM
 from typing import Dict, Any
 from langchain.agents import create_agent
 from langchain_community.llms import Ollama
-from backend.config.llm_config import llm_config
+from ..config.llm_config import llm_config
 
 
 class CryptoAgent:

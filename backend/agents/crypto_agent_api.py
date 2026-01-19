@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from agents.crypto_agent import agent
-from config.llm_config import llm_config
+from ..config.llm_config import llm_config
 from langchain_community.llms import Ollama
 # ============================================================================
 # ENDPOINTS - CHAT COM AGENT (FASE 1) 🚀
