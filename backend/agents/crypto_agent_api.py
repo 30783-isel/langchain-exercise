@@ -1,8 +1,11 @@
+# backend/agents/crypto_agent_api.py
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 from agents.crypto_agent import agent
-from ..config.llm_config import llm_config
+from config.llm_config import llm_config
 from langchain_community.llms import Ollama
+
 # ============================================================================
 # ENDPOINTS - CHAT COM AGENT (FASE 1) 🚀
 # ============================================================================
@@ -24,6 +27,7 @@ class AgentChatRequest(BaseModel):
     memory_type: str = "buffer"  # "buffer", "window", "summary"
     verbose: bool = False
     
+
 @router.post("/api/agent/chat")
 async def agent_chat(request: AgentChatRequest):
     """
@@ -62,9 +66,6 @@ async def agent_chat(request: AgentChatRequest):
             "error": f"Erro ao processar mensagem: {str(e)}",
             "success": False
         }
-
-
-
 
 
 # ============================================================================
