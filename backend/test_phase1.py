@@ -4,7 +4,7 @@ Script de teste para validar a Fase 1
 Exemplos de uso do Agent, Memory e Tools
 """
 import asyncio
-from backend.agents.crypto_agent import create_crypto_agent
+from agents.agent_ollama import create_crypto_agent
 from config.llm_config import llm_config
 
 

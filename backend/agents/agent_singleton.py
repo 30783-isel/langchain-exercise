@@ -1,4 +1,5 @@
-from .crypto_agent import CryptoAgent
+from .agent_ollama import AgentOLlama
+from .agent_claude import AgentClaude
  
 class CryptoAgentSingleton:
     """Singleton mutável - permite trocar LLM globalmente"""
@@ -12,10 +13,10 @@ class CryptoAgentSingleton:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    def get_agent(self) -> CryptoAgent:
+    def get_agent(self) -> AgentOLlama:
         """Retorna o agent atual"""
         if self._current_agent is None:
-            self._current_agent = CryptoAgent(model_name="gpt-oss:120b-cloud")
+            self._current_agent = AgentOLlama(model_name="gpt-oss:120b-cloud")
         return self._current_agent
     
     def switch_llm(self, llm_type: str) -> bool:
@@ -24,9 +25,9 @@ class CryptoAgentSingleton:
             return False  # Já está a usar esta LLM
         
         if llm_type == "claude":
-            self._current_agent = CryptoAgent(model_name="claude-sonnet-4")
+            self._current_agent = AgentClaude(model_name="claude-sonnet-4")
         elif llm_type == "ollama":
-            self._current_agent = CryptoAgent(model_name="gpt-oss:120b-cloud")
+            self._current_agent = AgentOLlama(model_name="gpt-oss:120b-cloud")
         else:
             raise ValueError(f"LLM desconhecida: {llm_type}")
         

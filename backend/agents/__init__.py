@@ -1,3 +1,3 @@
-from .crypto_agent import CryptoAgent, agent
+from .agent_ollama import AgentOLlama, agent
 
-__all__ = ["CryptoAgent", "agent"]
+__all__ = ["AgentOLlama", "agent"]

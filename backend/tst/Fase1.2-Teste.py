@@ -182,7 +182,7 @@ try:
     
     # Criar agent
     agent = create_crypto_agent(verbose=False)
-    print("✅ CryptoAgent criado")
+    print("✅ AgentOLlama criado")
     
     # Testar memory
     memory = get_memory("test_validation")
@@ -232,7 +232,7 @@ print("🎉 VALIDAÇÃO COMPLETA - LangChain 1.2.x OK!")
 print("="*70 + "\n")
 
 print("Próximos passos:")
-print("  1. Substitui crypto_agent.py e conversation_memory.py")
+print("  1. Substitui simple_agent.py e conversation_memory.py")
 print("  2. Corre: python test_phase1.py")
 print("  3. Inicia API: python main.py")
 print("  4. Testa endpoints no Postman")

@@ -1,8 +1,8 @@
-# backend/agents/crypto_agent_api.py
+# backend/agents/simple_agent_api.py
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from agents.crypto_agent import agent
+from agents.agent_ollama import agent
 from config.llm_config import llm_config
 from langchain_community.llms import Ollama
 from .chat_request import AgentChatRequest, ChatRequest

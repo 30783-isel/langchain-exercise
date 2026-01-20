@@ -1,4 +1,4 @@
-# backend/agents/crypto_agent.py
+# backend/agents/simple_agent.py
 """
 Agente Principal de Crypto Intelligence
 Versão SIMPLES usando LangChain 1.2.x `create_agent`
@@ -11,7 +11,7 @@ from langchain_community.llms import Ollama
 from config.llm_config import llm_config
 
 
-class CryptoAgent:
+class AgentOLlama:
     """
     Agente simples sem memory nem tools
     Perfeito para testes básicos
@@ -92,7 +92,7 @@ class CryptoAgent:
             }
 
 
-def create_crypto_agent(verbose: bool = False) -> CryptoAgent:
+def create_crypto_agent(verbose: bool = False) -> AgentOLlama:
     """
     Factory function para criar o agente
     
@@ -100,13 +100,13 @@ def create_crypto_agent(verbose: bool = False) -> CryptoAgent:
         verbose: Se True, mostra mensagens de debug
         
     Returns:
-        Instância de CryptoAgent
+        Instância de AgentOLlama
     """
-    return CryptoAgent(verbose=verbose)
+    return AgentOLlama(verbose=verbose)
 
 
 # 🔹 singleton opcional (1 instância global)
-agent = CryptoAgent(verbose=True)
+agent = AgentOLlama(verbose=True)
 
 
 

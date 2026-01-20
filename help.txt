@@ -1,20 +1,14 @@
 #Força a usar o python do env
 python -m uvicorn main:app --reload --port 8000
 
-
-
 Configurar remote
 git remote add origin git@github.com:30783-isel/langchain-exercise.git
 git branch -M master 
 git push -u origin master
 
-
-
-
 Remover git
 Remove-Item -Recurse -Force .git
 git push -u origin master --force
-
 
 Docker
 docker-compose up --build
@@ -34,3 +28,16 @@ docker-compose logs -f frontend-mobile
 
 # Últimas 100 linhas
 docker-compose logs --tail=100 backend
+
+
+
+
+
+Name:langchain                                                                        
+Version: 1.2.6
+
+Name: langchain-core
+Version: 1.2.7
+
+Name: langchain-community
+Version: 0.4.1

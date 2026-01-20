@@ -4,7 +4,7 @@
 from api import FastAPIAppFactory
 from utilities.utilities import Utilities
 from utilities.utilities_api import router as utilities_router
-from agents.crypto_agent_api import router as crypto_agent_router
+from agents.agent_ollama_api import router as crypto_agent_router
 from agents.agent_singleton_api import router as agent_singleton_router
 
 

@@ -77,14 +77,14 @@ except Exception as e:
 
 
 # ============================================================================ 
-# TESTE 3: Criar Agent Simples usando CryptoAgent
+# TESTE 3: Criar Agent Simples usando AgentOLlama
 # ============================================================================
 print("\n" + "="*70)
-print("🤖 TESTE 3: Criar Agent com classe CryptoAgent")
+print("🤖 TESTE 3: Criar Agent com classe AgentOLlama")
 print("-"*70)
 
 try:
-    from backend.agents.crypto_agent import create_crypto_agent
+    from agents.agent_ollama import create_crypto_agent
     
     # Criar a instância do agente
     agent = create_crypto_agent()
@@ -105,7 +105,7 @@ try:
         print(f"\n❌ Erro na execução do agente: {result['error']}")
     
 except Exception as e:
-    print(f"❌ Erro ao criar ou executar o CryptoAgent: {e}")
+    print(f"❌ Erro ao criar ou executar o AgentOLlama: {e}")
     import traceback
     traceback.print_exc()
 
