@@ -5,27 +5,12 @@ from pydantic import BaseModel
 from agents.crypto_agent import agent
 from config.llm_config import llm_config
 from langchain_community.llms import Ollama
-
+from .chat_request import AgentChatRequest, ChatRequest
 # ============================================================================
 # ENDPOINTS - CHAT COM AGENT (FASE 1) 🚀
 # ============================================================================
 
 router = APIRouter()
-
-# ============================================================================
-# MODELS
-# ============================================================================
-
-class ChatRequest(BaseModel):
-    message: str
-    conversation_id: str = "default"
-
-
-class AgentChatRequest(BaseModel):
-    message: str
-    conversation_id: str = "default"
-    memory_type: str = "buffer"  # "buffer", "window", "summary"
-    verbose: bool = False
     
 
 @router.post("/api/agent/chat")

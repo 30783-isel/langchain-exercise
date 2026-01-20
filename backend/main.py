@@ -5,6 +5,7 @@ from api import FastAPIAppFactory
 from utilities.utilities import Utilities
 from utilities.utilities_api import router as utilities_router
 from agents.crypto_agent_api import router as crypto_agent_router
+from agents.agent_singleton_api import router as agent_singleton_router
 
 
 app = FastAPIAppFactory.create_app()
@@ -15,6 +16,7 @@ app = FastAPIAppFactory.create_app()
 # ============================================================================
 app.include_router(utilities_router)
 app.include_router(crypto_agent_router)
+app.include_router(agent_singleton_router)
 
 # ============================================================================
 # STARTUP

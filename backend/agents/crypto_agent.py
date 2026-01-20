@@ -107,3 +107,7 @@ def create_crypto_agent(verbose: bool = False) -> CryptoAgent:
 
 # 🔹 singleton opcional (1 instância global)
 agent = CryptoAgent(verbose=True)
+
+
+
+
