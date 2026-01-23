@@ -1,0 +1,187 @@
+# ARQUITETURA LANGGRAPH - DIAGRAMA DO GRAFO
+
+"""
+============================================================================
+GRAFO LANGGRAPH - FLUXO DE EXECUÇÃO
+============================================================================
+
+                                START
+                                  ↓
+                            ┌──────────┐
+                            │  AGENT   │
+                            │  (LLM)   │
+                            └──────────┘
+                                  ↓
+                         [should_continue?]
+                         /              \
+                       /                  \
+                     /                      \
+                   YES                       NO
+            (tem tool_calls)          (sem tool_calls)
+                   ↓                          ↓
+              ┌─────────┐                   END
+              │  TOOLS  │                (resposta
+              │  NODE   │                 final)
+              └─────────┘
+                   ↓
+              [executa tools]
+                   ↓
+              ┌──────────┐
+              │  AGENT   │ ← volta para agent
+              │  (LLM)   │    com resultados
+              └──────────┘
+                   ↓
+              [repete ciclo]
+
+
+============================================================================
+COMPONENTES DO GRAFO
+============================================================================
+
+1. AGENT NODE:
+   - Recebe mensagens (user + histórico)
+   - Chama LLM (GPT-4o-mini)
+   - LLM decide se precisa de tools
+   - Retorna resposta OU tool_calls
+
+2. TOOLS NODE:
+   - Executa as tools solicitadas
+   - Retorna resultados
+   - Volta para AGENT automaticamente
+
+3. CONDITIONAL EDGE (should_continue):
+   - Verifica se há tool_calls
+   - SIM → vai para TOOLS
+   - NÃO → termina (END)
+
+4. STATE (AgentState):
+   - messages: lista de mensagens
+   - Acumula histórico completo
+   - Partilhado entre todos os nós
+
+
+============================================================================
+EXEMPLO DE EXECUÇÃO REAL
+============================================================================
+
+USER: "Qual é o preço do Bitcoin?"
+
+1. START → AGENT
+   Input: [HumanMessage("Qual é o preço do Bitcoin?")]
+   LLM decide: "Preciso da tool get_crypto_price"
+   Output: AIMessage(tool_calls=[{"name": "get_crypto_price", "args": {"symbol": "BTC"}}])
+
+2. AGENT → TOOLS (should_continue = "tools")
+   Input: tool_calls do passo anterior
+   Executa: get_crypto_price("BTC")
+   Output: ToolMessage("Bitcoin está a $65,000")
+
+3. TOOLS → AGENT
+   Input: [HumanMessage(...), AIMessage(...), ToolMessage("$65,000")]
+   LLM vê resultado da tool
+   Output: AIMessage("O Bitcoin está atualmente a $65,000")
+
+4. AGENT → END (should_continue = END)
+   Sem mais tool_calls
+   Resposta final: "O Bitcoin está atualmente a $65,000"
+
+
+============================================================================
+VANTAGENS DO LANGGRAPH
+============================================================================
+
+✅ CONTROLO TOTAL:
+   - Define exatamente o fluxo
+   - Múltiplos nós customizados
+   - Edges condicionais
+
+✅ FLEXIBILIDADE:
+   - Adiciona nós facilmente
+   - Ramificações complexas
+   - Loops controlados
+
+✅ DEBUGGING:
+   - Vê cada passo do grafo
+   - Estado em cada nó
+   - Fácil troubleshooting
+
+✅ PRODUCTION-READY:
+   - Mantém histórico
+   - Handle de erros
+   - Escalável
+
+
+============================================================================
+COMPARAÇÃO: ReACT vs LANGGRAPH
+============================================================================
+
+ReACT Agent (create_react_agent):
+  • Fluxo fixo: Thought → Action → Observation
+  • Menos controlo
+  • Mais simples para casos básicos
+
+LangGraph Agent:
+  • Fluxo customizável
+  • Controlo total
+  • Ideal para casos complexos
+  • Múltiplos "agentes" no mesmo grafo
+
+
+============================================================================
+PRÓXIMOS PASSOS (OPCIONAL)
+============================================================================
+
+Podes expandir o grafo com mais nós:
+
+1. NÓ DE VALIDAÇÃO:
+   - Valida input antes de executar tools
+   - Previne chamadas inválidas
+
+2. NÓ DE CACHE:
+   - Verifica se já tem resposta cached
+   - Evita chamadas desnecessárias
+
+3. NÓ DE LOGGING:
+   - Regista todas as interações
+   - Analytics e monitoring
+
+4. MÚLTIPLOS AGENTS:
+   - Nó de router que decide qual agent usar
+   - Agent especializado em crypto
+   - Agent especializado em notícias
+
+
+Exemplo de grafo expandido:
+
+            START
+              ↓
+        ┌──────────┐
+        │ VALIDATOR│
+        └──────────┘
+              ↓
+        ┌──────────┐
+        │  CACHE   │
+        └──────────┘
+         ↙        ↘
+     [hit]      [miss]
+       ↓            ↓
+     END      ┌──────────┐
+              │  ROUTER  │
+              └──────────┘
+               ↙    ↓    ↘
+         Agent1  Agent2  Agent3
+               ↘    ↓    ↙
+              ┌──────────┐
+              │   TOOLS  │
+              └──────────┘
+                    ↓
+              ┌──────────┐
+              │  LOGGER  │
+              └──────────┘
+                    ↓
+                   END
+"""
+
+# Para visualizar o grafo (requer pygraphviz):
+# from IPython.display import Image, display
+# display(Image(app.get_graph().draw_mermaid_png()))
