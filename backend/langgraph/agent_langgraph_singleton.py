@@ -1,9 +1,8 @@
-# backend/agents/agent_langgraph.py
+# backend/langgraph/agent_langgraph_singleton.py
 
 from typing import TypedDict, Annotated, Sequence
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
 import operator
 from agents.agent_singleton import CryptoAgentSingleton
 
@@ -39,6 +38,56 @@ def call_model(state: AgentState, llm):
     response = llm.invoke(messages)
     return {"messages": [response]}
 
+def create_tool_executor(tools: list):
+    """
+    Cria uma função para executar tools manualmente
+    Evita problemas do ToolNode com type hints
+    """
+    def execute_tools(state: AgentState):
+        """Executa tools baseado nos tool_calls"""
+        messages = state["messages"]
+        last_message = messages[-1]
+        
+        tool_messages = []
+        
+        # Executar cada tool_call
+        for tool_call in last_message.tool_calls:
+            # Encontrar a tool pelo nome
+            tool = next((t for t in tools if t.name == tool_call["name"]), None)
+            
+            if tool:
+                try:
+                    # Executar tool
+                    result = tool.invoke(tool_call["args"])
+                    
+                    # Criar mensagem de resposta
+                    tool_messages.append(
+                        ToolMessage(
+                            content=str(result),
+                            tool_call_id=tool_call["id"]
+                        )
+                    )
+                except Exception as e:
+                    # Em caso de erro, retornar mensagem de erro
+                    tool_messages.append(
+                        ToolMessage(
+                            content=f"Erro ao executar {tool_call['name']}: {str(e)}",
+                            tool_call_id=tool_call["id"]
+                        )
+                    )
+            else:
+                # Tool não encontrada
+                tool_messages.append(
+                    ToolMessage(
+                        content=f"Tool '{tool_call['name']}' não encontrada",
+                        tool_call_id=tool_call["id"]
+                    )
+                )
+        
+        return {"messages": tool_messages}
+    
+    return execute_tools
+
 # ============================================================================
 # CRIAR GRAFO LANGGRAPH
 # ============================================================================
@@ -59,7 +108,8 @@ def create_langgraph_agent(tools: list, verbose: bool = False):
     agent_singleton = CryptoAgentSingleton()
     agent = agent_singleton.get_agent()
     llm = agent.llm  # LLM dinâmica (Ollama ou Claude)
-        # Verificar tipo de LLM e fazer bind apropriado
+    
+    # Verificar tipo de LLM e fazer bind apropriado
     if isinstance(llm, ChatAnthropic):
         # Claude suporta bind_tools nativamente
         llm_with_tools = llm.bind_tools(tools)
@@ -74,7 +124,10 @@ def create_langgraph_agent(tools: list, verbose: bool = False):
     
     # 3. Adicionar nós
     workflow.add_node("agent", lambda state: call_model(state, llm_with_tools))
-    workflow.add_node("tools", ToolNode(tools))
+    
+    # Usar executor custom em vez de ToolNode
+    tool_executor = create_tool_executor(tools)
+    workflow.add_node("tools", tool_executor)
     
     # 4. Definir entry point
     workflow.set_entry_point("agent")
@@ -149,38 +202,3 @@ def run_langgraph_agent(app, message: str, conversation_history: list = None):
         "history": updated_history,
         "full_messages": result["messages"]
     }
-
-# ============================================================================
-# EXEMPLO DE USO
-# ============================================================================
-
-if __name__ == "__main__":
-    from langchain.tools import Tool
-    
-    def get_crypto_price(symbol: str) -> str:
-        """Obtém preço de crypto (exemplo)"""
-        return f"BTC está a ${50000}"
-    
-    tools = [
-        Tool(
-            name="get_crypto_price",
-            description="Obtém o preço atual de uma criptomoeda",
-            func=get_crypto_price
-        )
-    ]
-    
-    # Criar agent (usa LLM do singleton)
-    app = create_langgraph_agent(tools, verbose=True)
-    
-    # Trocar LLM se quiseres
-    # agent_singleton = CryptoAgentSingleton()
-    # agent_singleton.switch_llm("claude")
-    
-    # Testar
-    result = run_langgraph_agent(
-        app,
-        "Qual é o preço do Bitcoin?",
-        conversation_history=[]
-    )
-    
-    print(f"\n🤖 Resposta: {result['response']}")
