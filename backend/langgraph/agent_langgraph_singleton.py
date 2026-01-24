@@ -69,9 +69,6 @@ def create_langgraph_agent(tools: list, verbose: bool = False):
     else:
         raise ValueError(f"LLM tipo {type(llm)} não suportado")
     
-    return llm_with_tools
-
-    
     # 2. Criar grafo
     workflow = StateGraph(AgentState)
     
