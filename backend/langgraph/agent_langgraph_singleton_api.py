@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict
-from .agent_langgraph_singleton import create_langgraph_agent, run_langgraph_agent
+from .agent_langgraph_singleton import run_langgraph_agent, create_langgraph_agent
 
 # ============================================================================
 # ROUTER

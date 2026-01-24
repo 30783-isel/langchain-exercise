@@ -1,5 +1,4 @@
 # backend/main.py
-
 # ✨ Imports do nosso sistema LangChain (Fase 1)
 from api import FastAPIAppFactory
 from utilities.utilities import Utilities

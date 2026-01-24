@@ -8,6 +8,7 @@ SEM memory, SEM tools - apenas LLM
 from typing import Dict, Any
 from langchain.agents import create_agent
 from langchain_community.llms import Ollama
+from langchain_ollama import ChatOllama
 from config.llm_config import llm_config
 
 
@@ -21,7 +22,7 @@ class AgentOLlama:
         """Inicializa o agente"""
         try:
             # Criar LLM
-            self.llm = Ollama(
+            self.llm = ChatOllama(
                 model=model_name,
                 base_url=llm_config.ollama_url
             )

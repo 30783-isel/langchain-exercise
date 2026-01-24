@@ -7,6 +7,10 @@ from langgraph.prebuilt import ToolNode
 import operator
 from agents.agent_singleton import CryptoAgentSingleton
 
+from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
+from tools.ollama_tools import bind_tools_ollama
+
 # ============================================================================
 # ESTADO DO AGENT
 # ============================================================================
@@ -55,7 +59,18 @@ def create_langgraph_agent(tools: list, verbose: bool = False):
     agent_singleton = CryptoAgentSingleton()
     agent = agent_singleton.get_agent()
     llm = agent.llm  # LLM dinâmica (Ollama ou Claude)
-    llm_with_tools = llm.bind_tools(tools)
+        # Verificar tipo de LLM e fazer bind apropriado
+    if isinstance(llm, ChatAnthropic):
+        # Claude suporta bind_tools nativamente
+        llm_with_tools = llm.bind_tools(tools)
+    elif isinstance(llm, ChatOllama):
+        # Ollama precisa de formato JSON
+        llm_with_tools = bind_tools_ollama(llm, tools)
+    else:
+        raise ValueError(f"LLM tipo {type(llm)} não suportado")
+    
+    return llm_with_tools
+
     
     # 2. Criar grafo
     workflow = StateGraph(AgentState)
