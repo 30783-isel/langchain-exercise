@@ -57,7 +57,7 @@ export async function getApiUrl(forceRefresh: boolean = false): Promise<string> 
   
   // URLs configurados
   const TAILSCALE_API = 'http://100.100.94.97:8000'; 
-  const LOCAL_API = 'http://192.168.1.64:8000';  
+  const LOCAL_API = 'http://192.168.1.130:8000';  
   const LOCALHOST_API = 'http://localhost:8000';
   
   let selectedUrl: string;
